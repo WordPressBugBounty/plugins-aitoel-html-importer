@@ -1,0 +1,268 @@
+/* HTML to Elementor — Admin Styles */
+
+.htel-convert-wrap,
+.htel-settings-wrap {
+    max-width: 900px;
+}
+
+/* Card container */
+.htel-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.htel-card h2 {
+    margin-top: 0;
+    padding-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+}
+
+/* License status */
+.htel-license-status {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.htel-license-status.active {
+    background: #edfaef;
+    border: 1px solid #46b450;
+}
+
+.htel-license-status.inactive {
+    background: #fef8ee;
+    border: 1px solid #dba617;
+}
+
+.htel-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.htel-status-dot.active {
+    background: #46b450;
+}
+
+.htel-status-dot.inactive {
+    background: #dba617;
+}
+
+.htel-expires {
+    margin-left: auto;
+    color: #666;
+    font-size: 13px;
+}
+
+/* Tabs */
+.htel-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.htel-tab {
+    padding: 10px 20px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    color: #50575e;
+    margin-bottom: -1px;
+    border-radius: 4px 4px 0 0;
+}
+
+.htel-tab:hover {
+    color: #135e96;
+}
+
+.htel-tab.active {
+    background: #fff;
+    border-color: #c3c4c7;
+    border-bottom-color: #fff;
+    color: #1d2327;
+    font-weight: 600;
+}
+
+.htel-tab-content {
+    display: none;
+}
+
+.htel-tab-content.active {
+    display: block;
+}
+
+/* Textarea */
+#htel-html-input {
+    width: 100%;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    padding: 12px;
+    border: 1px solid #c3c4c7;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    resize: vertical;
+    min-height: 300px;
+}
+
+/* Upload area */
+.htel-upload-area {
+    border: 2px dashed #c3c4c7;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.htel-upload-area:hover,
+.htel-upload-area.dragover {
+    border-color: #2271b1;
+    background: #f0f6fc;
+}
+
+.htel-upload-placeholder .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #c3c4c7;
+}
+
+.htel-upload-area:hover .dashicons {
+    color: #2271b1;
+}
+
+.htel-upload-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.htel-remove-file {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    color: #a00;
+    padding: 0 4px;
+}
+
+/* Field */
+.htel-field {
+    margin-bottom: 16px;
+}
+
+.htel-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+/* Actions */
+.htel-actions {
+    margin-top: 20px;
+}
+
+/* Progress bar */
+.htel-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e5e5e5;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.htel-progress-fill {
+    height: 100%;
+    background: #2271b1;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.5s ease;
+    animation: htel-progress-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes htel-progress-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+#htel-progress-text {
+    color: #50575e;
+    font-style: italic;
+}
+
+/* Result */
+.htel-result-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+#htel-result-success h3 {
+    color: #46b450;
+}
+
+#htel-result-error h3 {
+    color: #d63638;
+}
+
+#htel-error-message {
+    color: #d63638;
+    background: #fcf0f1;
+    padding: 10px 14px;
+    border-radius: 4px;
+    border-left: 4px solid #d63638;
+}
+
+/* Quota reached is informational, not an error: nothing broke, the site used the conversions
+   included with it. Red-on-pink reads as breakage and is the wrong signal at the moment the
+   customer is deciding what to do. Applied via the `htel-quota` class from admin.js.
+   Presentation only — no promotional element is introduced. */
+#htel-result-error.htel-quota h3 {
+    color: #1d2327;
+}
+
+#htel-error-message.htel-quota {
+    color: #3c434a;
+    background: #f0f6fc;
+    border-left-color: #72aee6;
+}
+
+/* Message */
+.htel-message {
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-top: 12px;
+}
+
+.htel-message.success {
+    background: #edfaef;
+    border-left: 4px solid #46b450;
+    color: #1e4620;
+}
+
+.htel-message.error {
+    background: #fcf0f1;
+    border-left: 4px solid #d63638;
+    color: #8a1f21;
+}
+
+/* Free tier banner */
+/* Free-tier banner + upgrade-card styles removed per WP.org Guideline 5
+   (Trialware). The plugin no longer presents upgrade CTAs inside its
+   admin UI; the external conversion service enforces its own quotas. */
