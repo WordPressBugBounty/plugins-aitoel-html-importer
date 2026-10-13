@@ -144,18 +144,10 @@ class HTEL_Converter {
     public static function ajax_convert() {
         check_ajax_referer('htel_convert_nonce', 'nonce');
 
-        if (!current_user_can('edit_posts')) {
-            wp_send_json_error(array('message' => esc_html__('You do not have permission to create templates', 'aitoel-html-importer')));
+        $ready = self::conversion_preflight();
+        if (is_wp_error($ready)) {
+            self::send_failure($ready);
         }
-
-        // Check Elementor
-        if (!HTEL_Elementor_Check::is_active()) {
-            wp_send_json_error(array('message' => esc_html__('Elementor must be installed and activated', 'aitoel-html-importer')));
-        }
-
-        // Check license — allow free tier (no license) or paid
-        $has_license = HTEL_License::is_valid_for_conversion();
-        $license_key = $has_license ? HTEL_License::get_key() : '';
 
         // Get HTML input
         $html = '';
@@ -256,13 +248,99 @@ class HTEL_Converter {
             }
         }
 
+        $result = self::run_conversion($html, $title, $intent, count($imported_images));
+        if (is_wp_error($result)) {
+            self::send_failure($result);
+        }
+        wp_send_json_success($result);
+    }
+
+    /**
+     * The checks every conversion starts with, whoever asks for it: the Convert button or the
+     * `aitoel/convert-html` ability.
+     *
+     * @return true|WP_Error
+     */
+    private static function conversion_preflight() {
+        if (!current_user_can('edit_posts')) {
+            return new WP_Error('htel_forbidden',
+                esc_html__('You do not have permission to create templates', 'aitoel-html-importer'), array('status' => 403));
+        }
+        // A converted template carries its page's stylesheet and scripts, which WordPress lets only a user
+        // with the right to save unfiltered HTML store. One without it is refused here, before anything is
+        // read, sent or counted. (In a REST request Elementor would filter that user's template instead.)
+        if (!current_user_can('unfiltered_html')) {
+            return new WP_Error('htel_unfiltered_html_required',
+                esc_html__('Your WordPress user is not allowed to save unfiltered HTML on this site, and a converted template needs that for its styles. Nothing was converted and no conversion was used. Ask a user who may save unfiltered HTML to run it: on a standard site, an administrator or an editor.', 'aitoel-html-importer'),
+                array('status' => 403));
+        }
+        if (!HTEL_Elementor_Check::is_active()) {
+            return new WP_Error('htel_elementor_inactive',
+                esc_html__('Elementor must be installed and activated', 'aitoel-html-importer'), array('status' => 503));
+        }
+        return true;
+    }
+
+    /**
+     * Answers the Convert button with a failed conversion: the error's message, and the fields the
+     * page's script reads beside it (`reason`, `usage`, `not_charged`, `error_code`, `raw_error`).
+     * The HTTP status an error carries is for the REST route and is not part of the button's answer.
+     */
+    private static function send_failure($error) {
+        // Every error a conversion returns is built in this class with an array as its data.
+        $fields = $error->get_error_data();
+        unset($fields['status']);
+        wp_send_json_error(array_merge(array('message' => $error->get_error_message()), $fields));
+    }
+
+    /**
+     * Runs a conversion for the `aitoel/convert-html` ability (HTEL_Abilities): the checks, the request,
+     * the save and the confirm of the Convert button, on HTML an AI client hands over instead of the form.
+     *
+     * @param mixed $input  `html`, and optionally `title` and `intent`, as the ability's schema describes them.
+     * @return array|WP_Error  The data the button answers on a success, or the failure as an error.
+     */
+    public static function ability_convert($input) {
+        $ready = self::conversion_preflight();
+        if (is_wp_error($ready)) {
+            return $ready;
+        }
+        // The Abilities API checks the input against the schema first; a direct caller may hand over anything.
+        $input  = (array) $input;
+        $html   = $input['html'] ?? '';
+        $title  = sanitize_text_field($input['title'] ?? '');
+        $intent = $input['intent'] ?? '';
+        return self::run_conversion(
+            is_string($html) ? $html : '',
+            $title !== '' ? $title : 'Imported Page',
+            in_array($intent, array('header', 'footer'), true) ? $intent : '',
+            0
+        );
+    }
+
+    /**
+     * One conversion: sends the HTML to the conversion service, saves the template it returns and, only
+     * once the template is on the site, confirms the conversion so that it counts.
+     *
+     * @param string $html         The page's HTML (or its public URL).
+     * @param string $title        The template's title, already plain text.
+     * @param string $intent       'header', 'footer' or ''.
+     * @param int    $image_count  Images an uploaded archive brought with it.
+     * @return array|WP_Error  The success data, or the failure with the button's extra fields and an
+     *                         HTTP status as its error data.
+     */
+    private static function run_conversion($html, $title, $intent, $image_count) {
+        // Check license — allow free tier (no license) or paid
+        $has_license = HTEL_License::is_valid_for_conversion();
+        $license_key = $has_license ? HTEL_License::get_key() : '';
+
         if (empty($html)) {
-            wp_send_json_error(array('message' => esc_html__('No HTML content provided', 'aitoel-html-importer')));
+            return new WP_Error('htel_no_html', esc_html__('No HTML content provided', 'aitoel-html-importer'), array('status' => 400));
         }
 
         // Size check (5MB for HTML content after extraction)
         if (strlen($html) > 5 * 1024 * 1024) {
-            wp_send_json_error(array('message' => esc_html__('HTML exceeds 5MB limit', 'aitoel-html-importer')));
+            return new WP_Error('htel_too_large', esc_html__('HTML exceeds 5MB limit', 'aitoel-html-importer'), array('status' => 413));
         }
 
         // Send to API
@@ -344,10 +422,10 @@ class HTEL_Converter {
             $err = $response->get_error_message();
             $code = $response->get_error_code();
             $diag = self::build_connection_error_diagnostic($err, $code, $api_url, strlen(wp_json_encode($request_body)));
-            wp_send_json_error(array(
-                'message' => $diag,
+            return new WP_Error('htel_service_unreachable', $diag, array(
                 'error_code' => $code,
                 'raw_error' => $err,
+                'status' => 502,
             ));
         }
 
@@ -356,6 +434,8 @@ class HTEL_Converter {
 
         if ($code !== 200 || empty($body['success'])) {
             $error = isset($body['error']) ? $body['error'] : 'Conversion failed (HTTP ' . $code . ')';
+            // The REST route answers the service's own status; a 200 that is not a success is a bad gateway.
+            $status = $code >= 400 ? (int) $code : 502;
 
             // Free tier service quota reached — neutral error relay (no
             // upgrade CTA per WP.org Guideline 5).
@@ -364,10 +444,9 @@ class HTEL_Converter {
                 // cannot succeed — the same mechanism already used for js_rendered_page below.
                 // It carries NO quota numbers and NO upgrade payload: the `free_tier` metadata
                 // removed in the Guideline 5 pass is deliberately NOT reinstated.
-                wp_send_json_error(array(
-                    'message' => isset($body['message']) ? $body['message'] : esc_html__('Conversion service quota reached for this site this month.', 'aitoel-html-importer'),
-                    'reason'  => 'free_limit_reached',
-                ));
+                return new WP_Error('htel_free_limit_reached',
+                    isset($body['message']) ? $body['message'] : esc_html__('Conversion service quota reached for this site this month.', 'aitoel-html-importer'),
+                    array('reason' => 'free_limit_reached', 'status' => $status));
             }
 
             // Paid-tier monthly quota reached — relay the API's structured
@@ -377,11 +456,13 @@ class HTEL_Converter {
                 if (isset($body['usage']) && is_array($body['usage'])) {
                     update_option('htel_license_usage', $body['usage']);
                 }
-                wp_send_json_error(array(
-                    'message' => isset($body['message']) ? $body['message'] : esc_html__('Monthly conversion service quota reached.', 'aitoel-html-importer'),
-                    'usage'   => isset($body['usage']) ? $body['usage'] : null,
-                    'reason'  => 'monthly_limit_reached',
-                ));
+                return new WP_Error('htel_monthly_limit_reached',
+                    isset($body['message']) ? $body['message'] : esc_html__('Monthly conversion service quota reached.', 'aitoel-html-importer'),
+                    array(
+                        'usage'  => isset($body['usage']) ? $body['usage'] : null,
+                        'reason' => 'monthly_limit_reached',
+                        'status' => $status,
+                    ));
             }
 
             // JS-rendered page (React/Vue/Next/etc. SPA shell) — the page's content
@@ -389,14 +470,12 @@ class HTEL_Converter {
             // import. The API did NOT charge this conversion. Relay the guidance
             // message instead of a generic failure so the user knows what to do.
             if ($error === 'js_rendered_page') {
-                wp_send_json_error(array(
-                    'message'     => isset($body['message']) ? $body['message'] : esc_html__('This page is built by JavaScript, so there was no static content to import. Save the fully-rendered HTML from your browser (right-click → Save As → “Webpage, Complete”) and upload that file, or paste the page URL. You were not charged for this conversion.', 'aitoel-html-importer'),
-                    'reason'      => 'js_rendered_page',
-                    'not_charged' => true,
-                ));
+                return new WP_Error('htel_js_rendered_page',
+                    isset($body['message']) ? $body['message'] : esc_html__('This page is built by JavaScript, so there was no static content to import. Save the fully-rendered HTML from your browser (right-click → Save As → “Webpage, Complete”) and upload that file, or paste the page URL. You were not charged for this conversion.', 'aitoel-html-importer'),
+                    array('reason' => 'js_rendered_page', 'not_charged' => true, 'status' => $status));
             }
 
-            wp_send_json_error(array('message' => $error));
+            return new WP_Error('htel_conversion_failed', $error, array('status' => $status));
         }
 
         // Persist the live usage counter from the API response so the
@@ -421,10 +500,10 @@ class HTEL_Converter {
         $template_id = self::save_elementor_template($template, $title, $fonts, $global_colors, $global_fonts, $global_typography);
 
         if (is_wp_error($template_id)) {
-            wp_send_json_error(array(
+            return new WP_Error('htel_save_failed',
                 /* translators: %s: technical error message returned by WordPress */
-                'message' => sprintf(esc_html__('Failed to save template: %s', 'aitoel-html-importer'), $template_id->get_error_message()),
-            ));
+                sprintf(esc_html__('Failed to save template: %s', 'aitoel-html-importer'), $template_id->get_error_message()),
+                array('status' => 500));
         }
 
         $edit_url = admin_url('post.php?post=' . $template_id . '&action=elementor');
@@ -443,7 +522,7 @@ class HTEL_Converter {
             'library_url'   => $library_url,
             'element_count' => $element_count,
             'font_count'    => count($fonts),
-            'image_count'   => count($imported_images),
+            'image_count'   => $image_count,
             // The converter emits flexbox-container markup. If this site has the
             // Container feature OFF the new template renders BLANK on the front end,
             // so the UI surfaces a prominent warning (and a one-click enable for admins).
@@ -477,7 +556,7 @@ class HTEL_Converter {
             empty($license_key)
         );
 
-        wp_send_json_success($success_data);
+        return $success_data;
     }
 
     /**

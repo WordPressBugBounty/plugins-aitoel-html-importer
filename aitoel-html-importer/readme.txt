@@ -5,7 +5,7 @@ Requires at least: 5.8
 Requires Plugins: elementor
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.3.49
+Stable tag: 1.3.51
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -201,6 +201,28 @@ The result screen auto-diagnoses common causes (security/optimization plugins li
 4. Settings page — service connection and data preferences
 
 == Changelog ==
+
+= 1.3.51 =
+* Changed: converting a page now needs a user who may save unfiltered HTML, the right WordPress asks
+  for before it stores scripts and styles: an administrator or an editor on a standard site, the
+  network administrator on a multisite network. A converted template carries its page's stylesheet
+  and scripts, so the Convert button now asks for the same right the AI tool added in 1.3.50 asks for.
+* A user without that right is told so before anything is read or sent, and no conversion is used.
+* If your authors or contributors convert pages, an administrator or an editor now needs to do it.
+* On a site that sets `DISALLOW_UNFILTERED_HTML`, WordPress gives that right to nobody, so pages
+  cannot be converted there.
+
+= 1.3.50 =
+* New: an AI tool connected to your site can run the conversion. On WordPress 6.9 or later the
+  plugin registers a WordPress ability, `aitoel/convert-html`. An AI client connected to the site,
+  for example Claude through Elementor's MCP server (Elementor 4.3 or later, with its MCP switched
+  on), passes it a page's HTML and gets back a saved Elementor template: the template the Convert
+  button creates.
+* It uses the same conversion service and the same plan and allowance as the Convert button.
+* It converts for a user who can edit posts and may save unfiltered HTML: an administrator or an
+  editor on a standard site. Any other user is told so, and no conversion is used.
+* To switch it off, add `add_filter( 'aitoel_abilities_enabled', '__return_false' );` to your site.
+* The Convert button works as before.
 
 = 1.3.49 =
 * Fixed: backslashes were removed from what the plugin saved. A backslash in CSS - an escaped
@@ -467,6 +489,12 @@ The result screen auto-diagnoses common causes (security/optimization plugins li
 * Progress bar with status updates
 
 == Upgrade Notice ==
+
+= 1.3.51 =
+Converting a page now needs a user who may save unfiltered HTML: an administrator or an editor on a standard site. Other users are told so, and no conversion is used.
+
+= 1.3.50 =
+An AI tool connected to your site, for example Claude through Elementor's MCP, can now run the conversion as a WordPress ability (WordPress 6.9 or later). The Convert button works as before.
 
 = 1.3.49 =
 Backslashes in CSS and titles are now kept when a page is converted, including in your own Site Settings when the page's colours and fonts are added to them.

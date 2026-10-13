@@ -188,7 +188,8 @@
             printf(
                 /* translators: %s: link to the free design skill download page (opens in new tab) */
                 esc_html__('Download it free: %s', 'aitoel-html-importer'),
-                '<a href="https://aitoelementor.com/skill/" target="_blank" rel="noopener noreferrer">aitoelementor.com/skill</a>'
+                // The tag tells this link's visits apart on the site: the link sends no referrer.
+                '<a href="https://aitoelementor.com/skill/?utm_source=plugin&amp;utm_medium=import-screen" target="_blank" rel="noopener noreferrer">aitoelementor.com/skill</a>'
             );
             ?>
         </p>

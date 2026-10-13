@@ -24,6 +24,7 @@ class HTEL_Plugin {
         require_once HTEL_PLUGIN_DIR . 'includes/class-elementor-check.php';
         require_once HTEL_PLUGIN_DIR . 'includes/class-license.php';
         require_once HTEL_PLUGIN_DIR . 'includes/class-converter.php';
+        require_once HTEL_PLUGIN_DIR . 'includes/class-abilities.php';
         require_once HTEL_PLUGIN_DIR . 'includes/class-admin.php';
         // Custom updater only for paid/direct-download version (not WordPress.org)
         if (file_exists(HTEL_PLUGIN_DIR . 'includes/class-updater.php')) {
@@ -48,6 +49,9 @@ class HTEL_Plugin {
         add_action('wp_ajax_htel_validate_license', array('HTEL_License', 'ajax_validate'));
         add_action('wp_ajax_htel_refresh_license_state', array('HTEL_License', 'ajax_refresh_state'));
         add_action('wp_ajax_htel_enable_containers', array('HTEL_Elementor_Check', 'ajax_enable_containers'));
+
+        // The conversion as a WordPress ability, for AI clients connected to the site
+        HTEL_Abilities::init();
 
         // Settings registration
         add_action('admin_init', array('HTEL_Admin', 'register_settings'));

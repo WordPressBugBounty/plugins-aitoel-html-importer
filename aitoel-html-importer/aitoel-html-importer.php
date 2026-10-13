@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AI to Elementor — HTML Importer for Elementor
  * Description: Convert any HTML page into a fully editable Elementor template with one click. Works with AI page generators (Lovable, v0, Stitch, Cursor, bolt.new) and hand-written HTML.
- * Version: 1.3.49
+ * Version: 1.3.51
  * Author: AI to Elementor
  * Author URI: https://aitoelementor.com
  * License: GPL v2 or later
@@ -23,7 +23,7 @@
 
 defined('ABSPATH') || exit;
 
-define('HTEL_VERSION', '1.3.49');
+define('HTEL_VERSION', '1.3.51');
 define('HTEL_PLUGIN_FILE', __FILE__);
 define('HTEL_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('HTEL_PLUGIN_URL', plugin_dir_url(__FILE__));
